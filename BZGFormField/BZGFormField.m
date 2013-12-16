@@ -19,6 +19,7 @@ alpha:1.0]
 #define DEFAULT_NONE_COLOR UIColorFromRGB(0x95A5A6)
 #define DEFAULT_VALID_COLOR UIColorFromRGB(0x2ECC71)
 #define DEFAULT_INVALID_COLOR UIColorFromRGB(0xE74C3C)
+#define DEFAULT_REQUIRED_COLOR UIColorFromRGB(0xE78C7C)
 
 static NSString * const kValidationAnimationKey = @"validationAnimationKey";
 
@@ -94,6 +95,7 @@ static NSString * const kValidationAnimationKey = @"validationAnimationKey";
     self.leftIndicatorInvalidColor = DEFAULT_INVALID_COLOR;
     self.leftIndicatorValidColor = DEFAULT_VALID_COLOR;
     self.leftIndicatorNoneColor = DEFAULT_NONE_COLOR;
+    self.leftIndicatorRequiredColor = DEFAULT_REQUIRED_COLOR;
 
     self.textField = [[UITextField alloc] init];
     self.textField.borderStyle = UITextBorderStyleNone;
@@ -181,6 +183,14 @@ static NSString * const kValidationAnimationKey = @"validationAnimationKey";
                   formFieldState:(BZGFormFieldState)formFieldState
                         animated:(BOOL)animated
 {
+    // if the field is not valid and is required, then we have 2 options:
+    // 1) if no text has been entered then show the user that the field is required
+    // 2) if text has been entered, then continue to let the state be BZGFormFieldStateInvalid.
+    if (formFieldState != BZGFormFieldStateValid && self.required && (self.textField.text.length == 0) ) {
+        formFieldState = BZGFormFieldStateRequired;
+        leftIndicatorState = BZGLeftIndicatorStateInactive;
+    }
+    
     BOOL shouldAnimate = (_currentLeftIndicatorState && !leftIndicatorState) || animated;
     _currentLeftIndicatorState = leftIndicatorState;
     _currentFormFieldState = formFieldState;
@@ -203,6 +213,11 @@ static NSString * const kValidationAnimationKey = @"validationAnimationKey";
         case BZGFormFieldStateInvalid:
             self.leftIndicator.backgroundColor = self.leftIndicatorInvalidColor;
             [self.leftIndicator setTitle:(leftIndicatorState) ? @"!" : @""
+                                forState:UIControlStateNormal];
+            break;
+        case BZGFormFieldStateRequired:
+            self.leftIndicator.backgroundColor = self.leftIndicatorRequiredColor;
+            [self.leftIndicator setTitle:@""
                                 forState:UIControlStateNormal];
             break;
         case BZGFormFieldStateValid:
@@ -273,8 +288,10 @@ static NSString * const kValidationAnimationKey = @"validationAnimationKey";
 
 - (void)textFieldDidEndEditing:(UITextField *)textField
 {
-    if (textField.text.length == 0) {
-        [self updateLeftIndicatorState:BZGLeftIndicatorStateInactive formFieldState:BZGFormFieldStateNone animated:NO];
+//    if (textField.text.length == 0 ) {
+    if ( 0 ) {
+        BZGFormFieldState state = self.required ? BZGFormFieldStateRequired : BZGFormFieldStateNone;
+        [self updateLeftIndicatorState:BZGLeftIndicatorStateInactive formFieldState:state animated:NO];
     } else if (_textValidationBlock(textField.text)) {
         [self asyncValidateWithText:textField.text];
     } else {
@@ -295,7 +312,14 @@ replacementString:(NSString *)string
     if (_textValidationBlock(newText)) {
         [self asyncValidateWithText:newText];
     } else {
-        [self updateLeftIndicatorState:BZGLeftIndicatorStateInactive formFieldState:BZGFormFieldStateInvalid animated:NO];
+        /**
+         the text length of this field is incorrect right now, until this method returns and updates the field. Since we use the text length inside updateLeftIndicatorState:formFieldState:animated: to determine if the state is formFieldState:BZGFormFieldStateRequired, we have to wait a brief amount of time for the text field's text to be set.
+         */
+        double delayInSeconds = 0.05;
+        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            [self updateLeftIndicatorState:BZGLeftIndicatorStateInactive formFieldState:BZGFormFieldStateInvalid animated:NO];
+        });
     }
     if ([self.delegate respondsToSelector:@selector(textField:shouldChangeCharactersInRange:replacementString:)]) {
         return [self.delegate textField:textField

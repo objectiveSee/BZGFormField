@@ -14,6 +14,7 @@ typedef NS_ENUM(NSInteger, BZGLeftIndicatorState) {
 typedef NS_ENUM(NSInteger, BZGFormFieldState) {
     BZGFormFieldStateInvalid,
     BZGFormFieldStateValid,
+    BZGFormFieldStateRequired,
     BZGFormFieldStateNone
 };
 
@@ -37,6 +38,9 @@ typedef BOOL (^BZGTextValidationBlock)(NSString *text);
 /// The padding between the left indicator and the text field, relative to the height of the form field.
 @property (assign, nonatomic) CGFloat leftIndicatorRightPadding;
 
+/// The color of the left indicator when the form is required.
+@property (strong, nonatomic) UIColor *leftIndicatorRequiredColor;
+
 /// The color of the left indicator when the form is invalid.
 @property (strong, nonatomic) UIColor *leftIndicatorInvalidColor;
 
@@ -45,6 +49,10 @@ typedef BOOL (^BZGTextValidationBlock)(NSString *text);
 
 /// The color of the left indicator when the form is neither invalid nor valid.
 @property (strong, nonatomic) UIColor *leftIndicatorNoneColor;
+
+/// The color of the left indicator when the form is neither invalid nor valid.
+@property (nonatomic) BOOL required;
+
 
 /**
  * Returns the form's current validation state (invalid | valid | none)
